@@ -1,0 +1,6 @@
+name: BrilliantTridentDupeFixer
+version: '1.0'
+main: Rice.Chen.BrilliantTridentDupeFixer.BrilliantTridentDupeFixer
+api-version: '1.20'
+authors: [RiceChen_]
+folia-supported: true
