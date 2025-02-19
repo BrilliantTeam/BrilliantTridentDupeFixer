@@ -1,6 +1,18 @@
 name: BrilliantTridentDupeFixer
-version: '1.0'
+version: '1.1'
 main: Rice.Chen.BrilliantTridentDupeFixer.BrilliantTridentDupeFixer
 api-version: '1.20'
 authors: [RiceChen_]
 folia-supported: true
+
+commands:
+  tridentdupefixer:
+    description: Main command for BrilliantTridentDupeFixer
+    aliases: [tdf]
+    usage: /<command> [reload|info|help]
+    permission: tridentdupefixer.admin
+
+permissions:
+  tridentdupefixer.admin:
+    description: Allows access to all BrilliantTridentDupeFixer admin commands
+    default: op

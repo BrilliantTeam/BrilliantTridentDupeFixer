@@ -8,6 +8,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -23,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class BrilliantTridentDupeFixer extends JavaPlugin {
     private final TridentEventListener eventListener;
+    private MessageConfig messageConfig;
 
     public BrilliantTridentDupeFixer() {
         this.eventListener = new TridentEventListener(this);
@@ -30,7 +33,15 @@ public class BrilliantTridentDupeFixer extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
+        this.messageConfig = new MessageConfig(this);
+        
         getServer().getPluginManager().registerEvents(eventListener, this);
+        
+        TridentDupeFixerCommand commandExecutor = new TridentDupeFixerCommand(this);
+        getCommand("tridentdupefixer").setExecutor(commandExecutor);
+        getCommand("tridentdupefixer").setTabCompleter(commandExecutor);
+        
         getLogger().info("Trident duplication prevention system enabled");
     }
 
@@ -39,22 +50,35 @@ public class BrilliantTridentDupeFixer extends JavaPlugin {
         eventListener.cleanup();
         getLogger().info("Trident duplication prevention system disabled");
     }
+    
+    public MessageConfig getMessageConfig() {
+        return messageConfig;
+    }
+    
+    public void reloadMessageConfig() {
+        reloadConfig();
+        messageConfig.loadConfig();
+        getLogger().info("Configuration reloaded successfully");
+    }
 }
 
 class TridentEventListener implements Listener {
     private final BrilliantTridentDupeFixer plugin;
     private final Set<UUID> playersReadyToThrow;
     private final Map<UUID, Integer> lastProjectileCancel;
+    private final Set<UUID> playersWithOpenContainer;
 
     public TridentEventListener(BrilliantTridentDupeFixer plugin) {
         this.plugin = plugin;
         this.playersReadyToThrow = ConcurrentHashMap.newKeySet();
         this.lastProjectileCancel = new ConcurrentHashMap<>();
+        this.playersWithOpenContainer = ConcurrentHashMap.newKeySet();
     }
 
     public void cleanup() {
         playersReadyToThrow.clear();
         lastProjectileCancel.clear();
+        playersWithOpenContainer.clear();
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -64,15 +88,22 @@ class TridentEventListener implements Listener {
         }
 
         Player player = event.getPlayer();
+        UUID playerUUID = player.getUniqueId();
         player.closeInventory();
 
+        if (playersWithOpenContainer.contains(playerUUID)) {
+            playersWithOpenContainer.remove(playerUUID);
+            playersReadyToThrow.remove(playerUUID);
+            return;
+        }
+
         if (isProjectileCancelled(player)) {
-            logWarning("hotkey duplication", player);
+            logWarning(MessageConfig.WarningType.HOTKEY_DUPE, player);
             event.setCancelled(true);
             return;
         }
 
-        playersReadyToThrow.remove(player.getUniqueId());
+        playersReadyToThrow.remove(playerUUID);
     }
 
     @EventHandler
@@ -82,8 +113,17 @@ class TridentEventListener implements Listener {
             return;
         }
 
+        Player player = event.getPlayer();
+        
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK && 
+            event.getClickedBlock() != null && 
+            isContainer(event.getClickedBlock().getType())) {
+            playersWithOpenContainer.add(player.getUniqueId());
+            return;
+        }
+
         if (isRightClick(event.getAction()) && isTrident(item)) {
-            playersReadyToThrow.add(event.getPlayer().getUniqueId());
+            playersReadyToThrow.add(player.getUniqueId());
         }
     }
 
@@ -95,16 +135,45 @@ class TridentEventListener implements Listener {
         }
 
         UUID playerUUID = event.getWhoClicked().getUniqueId();
+        
+        if (playersWithOpenContainer.contains(playerUUID)) {
+            return;
+        }
+        
         if (playersReadyToThrow.contains(playerUUID)) {
-            logWarning("inventory manipulation during throw state", event.getWhoClicked().getName());
+            if (event.getWhoClicked() instanceof Player player) {
+                logWarning(MessageConfig.WarningType.INVENTORY_MANIPULATION, player);
+            } else {
+                logWarning(MessageConfig.WarningType.INVENTORY_MANIPULATION, event.getWhoClicked().getName());
+            }
             event.setCancelled(true);
             return;
         }
 
         if (event.getAction() == InventoryAction.HOTBAR_SWAP) {
-            logWarning("hotbar swap", event.getWhoClicked().getName());
+            if (event.getWhoClicked() instanceof Player player) {
+                logWarning(MessageConfig.WarningType.HOTBAR_SWAP, player);
+            } else {
+                logWarning(MessageConfig.WarningType.HOTBAR_SWAP, event.getWhoClicked().getName());
+            }
             lastProjectileCancel.put(playerUUID, plugin.getServer().getCurrentTick());
             event.setResult(Event.Result.DENY);
+        }
+    }
+
+    @EventHandler
+    public void handleInventoryOpen(InventoryOpenEvent event) {
+        if (event.getPlayer() instanceof Player) {
+            playersWithOpenContainer.add(event.getPlayer().getUniqueId());
+        }
+    }
+
+    @EventHandler
+    public void handleInventoryClose(InventoryCloseEvent event) {
+        if (event.getPlayer() instanceof Player) {
+            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+                playersWithOpenContainer.remove(event.getPlayer().getUniqueId());
+            }, 1L);
         }
     }
 
@@ -123,6 +192,7 @@ class TridentEventListener implements Listener {
         UUID playerUUID = event.getPlayer().getUniqueId();
         playersReadyToThrow.remove(playerUUID);
         lastProjectileCancel.remove(playerUUID);
+        playersWithOpenContainer.remove(playerUUID);
     }
 
     private boolean isTrident(ItemStack item) {
@@ -139,11 +209,25 @@ class TridentEventListener implements Listener {
         return currentTick == lastCancelTick;
     }
 
-    private void logWarning(String action, String playerName) {
-        plugin.getLogger().warning(String.format("Detected player %s attempting to %s trident.", playerName, action));
+    private boolean isContainer(Material material) {
+        return switch (material) {
+            case CHEST, TRAPPED_CHEST, ENDER_CHEST, BARREL,
+                 SHULKER_BOX, WHITE_SHULKER_BOX, ORANGE_SHULKER_BOX, 
+                 MAGENTA_SHULKER_BOX, LIGHT_BLUE_SHULKER_BOX, YELLOW_SHULKER_BOX,
+                 LIME_SHULKER_BOX, PINK_SHULKER_BOX, GRAY_SHULKER_BOX,
+                 LIGHT_GRAY_SHULKER_BOX, CYAN_SHULKER_BOX, PURPLE_SHULKER_BOX,
+                 BLUE_SHULKER_BOX, BROWN_SHULKER_BOX, GREEN_SHULKER_BOX,
+                 RED_SHULKER_BOX, BLACK_SHULKER_BOX, FURNACE, BLAST_FURNACE,
+                 SMOKER, HOPPER, DISPENSER, DROPPER, BREWING_STAND -> true;
+            default -> false;
+        };
     }
 
-    private void logWarning(String action, Player player) {
-        logWarning(action, player.getName());
+    private void logWarning(MessageConfig.WarningType type, Player player) {
+        plugin.getMessageConfig().sendWarning(type, player);
+    }
+
+    private void logWarning(MessageConfig.WarningType type, String playerName) {
+        plugin.getMessageConfig().sendWarning(type, playerName);
     }
 }

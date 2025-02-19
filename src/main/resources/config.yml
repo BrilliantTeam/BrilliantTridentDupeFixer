@@ -1,0 +1,36 @@
+messages:
+  # Should warnings be logged to the console?
+  log-to-console: true
+  
+  # Should warnings be shown to players?
+  notify-player: true
+  
+  # Prefix for player messages (supports MiniMessage format)
+  prefix: "<dark_red>[BrilliantTridentDupeFixer]</dark_red>"
+  
+  # Player warning messages (supports MiniMessage format)
+  player:
+    hotkey-dupe: "<red>Detected attempted hotkey duplication of trident.</red>"
+    inventory-manipulation: "<red>Detected inventory manipulation during trident throw state.</red>"
+    hotbar-swap: "<red>Detected hotbar swap with trident.</red>"
+  
+  # Console warning messages (plain text)
+  console:
+    hotkey-dupe: "Detected attempted hotkey duplication of trident"
+    inventory-manipulation: "Detected inventory manipulation during trident throw state"
+    hotbar-swap: "Detected hotbar swap with trident"
+
+# Command messages (supports MiniMessage format)
+command-messages:
+  # Permission message
+  no-permission: "<red>You don't have permission to use this command.</red>"
+  
+  # Command responses
+  config-reloaded: "<green>Plugin configuration has been reloaded.</green>"
+  unknown-command: "<red>Unknown command. Use <white>/tdf help</white> to see available commands.</red>"
+  
+  # Help command messages
+  help-header: "<yellow>=== BrilliantTridentDupeFixer Help ===</yellow>"
+  help-reload: "<white>/tdf reload</white> <gray>- Reload plugin configuration</gray>"
+  help-info: "<white>/tdf info</white> <gray>- Display plugin information</gray>"
+  help-help: "<white>/tdf help</white> <gray>- Show this help message</gray>"
