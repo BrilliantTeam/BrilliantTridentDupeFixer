@@ -6,7 +6,7 @@ messages:
   notify-player: true
   
   # Prefix for player messages (supports MiniMessage format)
-  prefix: "<dark_red>[BrilliantTridentDupeFixer]</dark_red>"
+  prefix: "<dark_red>[BrilliantTridentDupeFixer] </dark_red>"
   
   # Player warning messages (supports MiniMessage format)
   player:

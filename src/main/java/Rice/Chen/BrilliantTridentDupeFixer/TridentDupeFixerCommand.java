@@ -38,11 +38,9 @@ public class TridentDupeFixerCommand implements CommandExecutor, TabCompleter {
         switch (args[0].toLowerCase()) {
             case "reload" -> {
                 plugin.reloadMessageConfig();
-                // Only display config-reloaded message to players, not console
                 if (sender instanceof Player) {
                     sendMessageWithPrefix(sender, plugin.getMessageConfig().getCommandMessage("config-reloaded"));
                 } else {
-                    // For console, use the built-in logger instead
                     plugin.getLogger().info("Configuration reloaded successfully");
                 }
             }
@@ -82,13 +80,13 @@ public class TridentDupeFixerCommand implements CommandExecutor, TabCompleter {
         if (sender instanceof Player player) {
             Component prefixComponent = MiniMessage.miniMessage().deserialize(prefix);
             Component messageComponent = MiniMessage.miniMessage().deserialize(message);
-            player.sendMessage(prefixComponent.append(Component.text(" ")).append(messageComponent));
+            player.sendMessage(prefixComponent.append(Component.text("")).append(messageComponent));
         } else {
             Component prefixComponent = MiniMessage.miniMessage().deserialize(prefix);
             Component messageComponent = MiniMessage.miniMessage().deserialize(message);
             String plainPrefix = PlainTextComponentSerializer.plainText().serialize(prefixComponent);
             String plainMessage = PlainTextComponentSerializer.plainText().serialize(messageComponent);
-            sender.sendMessage(plainPrefix + " " + plainMessage);
+            sender.sendMessage(plainPrefix + "" + plainMessage);
         }
     }
     

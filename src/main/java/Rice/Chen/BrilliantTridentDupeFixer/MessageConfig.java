@@ -43,7 +43,7 @@ public class MessageConfig {
         
         this.logToConsole = messageSection.getBoolean("log-to-console", true);
         this.notifyPlayer = messageSection.getBoolean("notify-player", true);
-        this.prefix = messageSection.getString("prefix", "<dark_red>[BrilliantTridentDupeFixer]</dark_red>");
+        this.prefix = messageSection.getString("prefix", "<dark_red>[BrilliantTridentDupeFixer] </dark_red>");
         
         ConfigurationSection playerMsgSection = messageSection.getConfigurationSection("player");
         if (playerMsgSection != null) {

@@ -170,10 +170,8 @@ class TridentEventListener implements Listener {
 
     @EventHandler
     public void handleInventoryClose(InventoryCloseEvent event) {
-        if (event.getPlayer() instanceof Player) {
-            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                playersWithOpenContainer.remove(event.getPlayer().getUniqueId());
-            }, 1L);
+        if (event.getPlayer() instanceof Player player) {
+            playersWithOpenContainer.remove(player.getUniqueId());
         }
     }
 
